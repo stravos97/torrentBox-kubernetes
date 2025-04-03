@@ -34,27 +34,27 @@ graph TB
     
     %% Main functional groups
     subgraph "User-Facing Interfaces"
-        Jellyfin["Jellyfin\n(Media Server)"]
-        Jellyseerr["Jellyseerr\n(Request System)"]
+        Jellyfin["Jellyfin (Media Server)"]
+        Jellyseerr["Jellyseerr (Request System)"]
     end
     
     subgraph "Media Management"
-        Sonarr["Sonarr\n(TV Shows)"]
-        Radarr["Radarr\n(Movies)"]
-        Lidarr["Lidarr\n(Music)"]
-        Bazarr["Bazarr\n(Subtitles)"]
+        Sonarr["Sonarr (TV Shows)"]
+        Radarr["Radarr (Movies)"]
+        Lidarr["Lidarr (Music)"]
+        Bazarr["Bazarr (Subtitles)"]
     end
     
     subgraph "Download & Search"
-        QBit["qBittorrent\n(Torrent Client)"]
-        Sabnzbd["Sabnzbd\n(Usenet Client)"]
-        Prowlarr["Prowlarr\n(Indexers)"]
+        QBit["qBittorrent (Torrent Client)"]
+        Sabnzbd["Sabnzbd (Usenet Client)"]
+        Prowlarr["Prowlarr (Indexers)"]
     end
     
     %% Storage
     subgraph "Storage"
-        ConfigVol["Config Volume\n(Settings)"]
-        MediaVol["Media Volume\n(Content)"]
+        ConfigVol["Config Volume (Settings)"]
+        MediaVol["Media Volume (Content)"]
     end
     
     %% Primary connections
