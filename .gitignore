@@ -9,3 +9,6 @@ config/
 
 # Kubernetes secrets manifest
 02-secret.yaml
+
+# Kubernetes secrets manifest
+base/secret.yaml
