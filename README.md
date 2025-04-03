@@ -29,66 +29,63 @@ The system is organized into several interconnected components:
 
 ```mermaid
 graph TD
-    subgraph "Kubernetes Cluster (Namespace: torrentbox)"
-        subgraph "User Access"
-            U[User Browser]
-            PF[kubectl port-forward]
-            NP[Node IP + NodePort]
-        end
-
-        subgraph "Media Management Apps"
-            QB_SVC[Service: qbittorrent (ClusterIP)]; QB_POD[Pod: qbittorrent (Deployment)];
-            SO_SVC[Service: sonarr (ClusterIP)]; SO_POD[Pod: sonarr (Deployment)];
-            RA_SVC[Service: radarr (ClusterIP)]; RA_POD[Pod: radarr (Deployment)];
-            LI_SVC[Service: lidarr (ClusterIP)]; LI_POD[Pod: lidarr (Deployment)];
-            BA_SVC[Service: bazarr (ClusterIP)]; BA_POD[Pod: bazarr (Deployment)];
-            PR_SVC[Service: prowlarr (ClusterIP)]; PR_POD[Pod: prowlarr (Deployment)];
-            QR_POD[Pod: qbitrr (Deployment)];
-            DP_POD[Pod: doplarr (Deployment)];
-            FS_SVC[Service: flaresolverr (ClusterIP)]; FS_POD[Pod: flaresolverr (Deployment)];
-        end
-
-        subgraph "Media Serving / Requesting"
-            JF_SVC[Service: jellyfin (NodePort)]; JF_POD[Pod: jellyfin (Deployment)];
-            JS_SVC[Service: jellyseer (NodePort)]; JS_POD[Pod: jellyseer (Deployment)];
-            SZ_SVC[Service: sabnzbd (NodePort)]; SZ_POD[Pod: sabnzbd (Deployment)];
-        end
-
-        subgraph "Storage"
-            PVC[PVC: main-data-pvc];
-            HP[hostPath: ./config/*];
-        end
-
-        %% Connections
-        SO_POD --> QB_SVC; RA_POD --> QB_SVC; LI_POD --> QB_SVC; QR_POD --> QB_SVC;
-        BA_POD --> SO_SVC; BA_POD --> RA_SVC;
-        PR_POD --> SO_SVC; PR_POD --> RA_SVC; PR_POD --> LI_SVC; PR_POD --> BA_SVC; PR_POD --> QB_SVC;
-        DP_POD --> SO_SVC; DP_POD --> RA_SVC;
-        JS_POD --> JF_SVC; JS_POD --> SO_SVC; JS_POD --> RA_SVC;
-
-        %% Storage Mounts
-        QB_POD -- "/config" --> HP; QB_POD -- "/data/torrents" --> PVC;
-        SO_POD -- "/config" --> HP; SO_POD -- "/data" --> PVC;
-        RA_POD -- "/config" --> HP; RA_POD -- "/data" --> PVC;
-        LI_POD -- "/config" --> HP; LI_POD -- "/data" --> PVC;
-        BA_POD -- "/config" --> HP; BA_POD -- "/data" --> PVC;
-        PR_POD -- "/config" --> HP;
-        QR_POD -- "/config" --> HP; QR_POD -- "/data" --> PVC;
-        FS_POD -- "(no config)" --> HP;
-        DP_POD -- "(no config)" --> HP;
-        JF_POD -- "/config" --> HP; JF_POD -- "/data/media" --> PVC;
-        JS_POD -- "/app/config" --> HP; JS_POD -- "/data/media" --> PVC;
-        SZ_POD -- "/config" --> HP; SZ_POD -- "/data/usenet" --> PVC;
-
-        %% External Access
-        U -- "Port Forward" --> PF;
-        PF --> QB_SVC; PF --> SO_SVC; PF --> RA_SVC; PF --> LI_SVC; PF --> BA_SVC; PF --> PR_SVC; PF --> FS_SVC;
-        U -- "NodePort" --> NP;
-        NP --> JF_SVC; NP --> JS_SVC; NP --> SZ_SVC;
-    end
-
-    style PVC fill:#f9f,stroke:#333,stroke-width:2px;
-    style HP fill:#ccf,stroke:#333,stroke-width:2px;
+    %% User Access Layer
+    User[User Browser] --> PortForward[Port Forwarding]
+    User --> NodePort[NodePort Services]
+    
+    %% NodePort Services (Direct User Access)
+    NodePort --> Jellyfin[Jellyfin]
+    NodePort --> Jellyseerr[Jellyseerr]
+    NodePort --> Sabnzbd[Sabnzbd]
+    
+    %% Port Forwarded Services
+    PortForward --> QBit[qBittorrent]
+    PortForward --> Sonarr[Sonarr]
+    PortForward --> Radarr[Radarr]
+    PortForward --> Lidarr[Lidarr]
+    PortForward --> Bazarr[Bazarr]
+    PortForward --> Prowlarr[Prowlarr]
+    PortForward --> FlareSolverr[FlareSolverr]
+    
+    %% Application Connections
+    Sonarr --> QBit
+    Radarr --> QBit
+    Lidarr --> QBit
+    
+    Bazarr --> Sonarr
+    Bazarr --> Radarr
+    
+    Prowlarr --> Sonarr
+    Prowlarr --> Radarr
+    Prowlarr --> Lidarr
+    Prowlarr --> QBit
+    
+    Jellyseerr --> Jellyfin
+    Jellyseerr --> Sonarr
+    Jellyseerr --> Radarr
+    
+    %% Storage
+    ConfigVolume[Config Volume\n(hostPath)] --> QBit
+    ConfigVolume --> Sonarr
+    ConfigVolume --> Radarr
+    ConfigVolume --> Lidarr
+    ConfigVolume --> Bazarr
+    ConfigVolume --> Prowlarr
+    ConfigVolume --> Jellyfin
+    ConfigVolume --> Jellyseerr
+    ConfigVolume --> Sabnzbd
+    
+    MediaVolume[Media Volume\n(PVC)] --> QBit
+    MediaVolume --> Sonarr
+    MediaVolume --> Radarr
+    MediaVolume --> Lidarr
+    MediaVolume --> Bazarr
+    MediaVolume --> Jellyfin
+    MediaVolume --> Jellyseerr
+    MediaVolume --> Sabnzbd
+    
+    style ConfigVolume fill:#ccf,stroke:#333,stroke-width:2px
+    style MediaVolume fill:#f9f,stroke:#333,stroke-width:2px
 ```
 
 ### Key Components Explained
