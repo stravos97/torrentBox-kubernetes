@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: radarr
+  namespace: torrentbox
+  labels:
+    app: radarr
+spec:
+  replicas: 1
+  # Revert to default RollingUpdate strategy
+  # strategy:
+  #   type: Recreate
+  selector:
+    matchLabels:
+      app: radarr
+  template:
+    metadata:
+      labels:
+        app: radarr
+    spec:
+      terminationGracePeriodSeconds: 60
+      volumes:
+        # Remove gluetun config volume
+        # - name: gluetun-config-hostpath
+        #   hostPath:
+        #     path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/gluetun
+        #     type: DirectoryOrCreate
+        - name: radarr-config-hostpath
+          hostPath:
+            path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/radarr
+            type: DirectoryOrCreate
+        - name: main-data # Mount the consolidated data volume
+          persistentVolumeClaim:
+            claimName: main-data-pvc
+        # Remove /dev/net/tun volume
+        # - name: dev-net-tun
+        #   hostPath:
+        #     path: /dev/net/tun
+        #     type: CharDevice
+      containers:
+        # Remove gluetun container
+        # - name: gluetun
+        #   ... (removed) ...
+
+        - name: radarr # Now the only container
+          # Using linux/arm64 explicitly as specified in compose
+          image: lscr.io/linuxserver/radarr:latest # platform handled by k8s node selector or runtime class if needed
+          imagePullPolicy: IfNotPresent
+          ports: # Expose ports directly on this container
+            - name: radarr-webui # Use the same name as the service targetPort will use
+              containerPort: 7878 # Port from compose file
+              protocol: TCP
+          env:
+            - name: PUID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PUID
+            - name: PGID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PGID
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: TZ
+            - name: UMASK # Added UMASK from compose example
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: UMASK # Corrected this from TZ
+          volumeMounts:
+            - name: radarr-config-hostpath # Use hostPath volume
+              mountPath: /config
+            - name: main-data # Mount the consolidated volume
+              mountPath: /data # Radarr expects media/downloads here for hardlinks
+          readinessProbe:
+            httpGet:
+              path: /ping # Radarr's ping endpoint
+              port: 7878 # Internal port Radarr listens on
+            initialDelaySeconds: 20 # Give time for Radarr to start
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3

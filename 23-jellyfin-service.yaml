@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyfin
+  namespace: torrentbox
+  labels:
+    app: jellyfin
+spec:
+  type: NodePort # Expose externally via node IP and a high port
+  selector:
+    app: jellyfin # Selects the Pods managed by the jellyfin Deployment
+  ports:
+    - name: http-web
+      port: 8096 # Port the service listens on internally
+      targetPort: http-web # Target the named port on the Jellyfin container
+      protocol: TCP
+      # nodePort: 30096 # Optional: Specify a fixed NodePort
+    - name: dlna-udp
+      port: 7359
+      targetPort: dlna-udp
+      protocol: UDP
+      # nodePort: 30359 # Optional: Specify a fixed NodePort
+    - name: discovery-udp
+      port: 1900
+      targetPort: discovery-udp
+      protocol: UDP
+      # nodePort: 30900 # Optional: Specify a fixed NodePort

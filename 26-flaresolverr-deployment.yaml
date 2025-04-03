@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flaresolverr
+  namespace: torrentbox
+  labels:
+    app: flaresolverr
+spec:
+  replicas: 1
+  # Revert to default RollingUpdate strategy
+  # strategy:
+  #   type: Recreate
+  selector:
+    matchLabels:
+      app: flaresolverr
+  template:
+    metadata:
+      labels:
+        app: flaresolverr
+    spec:
+      terminationGracePeriodSeconds: 60
+      volumes:
+        # Remove gluetun config volume
+        # - name: gluetun-config-hostpath
+        #   hostPath:
+        #     path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/gluetun
+        #     type: DirectoryOrCreate
+        # Remove /dev/net/tun volume
+        # - name: dev-net-tun
+        #   hostPath:
+        #     path: /dev/net/tun
+        #     type: CharDevice
+        # No volumes needed for flaresolverr itself
+        [] # Empty volumes section must be an empty array
+      containers:
+        # Remove gluetun container
+        # - name: gluetun
+        #   ... (removed) ...
+
+        - name: flaresolverr # Now the only container
+          # Using linux/arm64 explicitly as specified in compose
+          image: ghcr.io/flaresolverr/flaresolverr:latest # platform handled by k8s node selector or runtime class if needed
+          imagePullPolicy: IfNotPresent
+          ports: # Expose ports directly on this container
+            - name: flaresolverr # Use the same name as the service targetPort will use
+              containerPort: 8191 # Port from compose file
+              protocol: TCP
+          env:
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: LOG_LEVEL
+            - name: LOG_HTML
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: LOG_HTML
+            - name: CAPTCHA_SOLVER
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: CAPTCHA_SOLVER
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: TZ
+          # No volume mounts needed for flaresolverr itself
+          readinessProbe:
+            tcpSocket:
+              port: 8191 # Check if the process is listening internally
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3

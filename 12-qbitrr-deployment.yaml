@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qbitrr
+  namespace: torrentbox
+  labels:
+    app: qbitrr
+spec:
+  replicas: 1
+  # Revert to default RollingUpdate strategy
+  # strategy:
+  #   type: Recreate
+  selector:
+    matchLabels:
+      app: qbitrr
+  template:
+    metadata:
+      labels:
+        app: qbitrr
+    spec:
+      terminationGracePeriodSeconds: 60
+      volumes:
+        # Remove gluetun config volume
+        # - name: gluetun-config-hostpath
+        #   hostPath:
+        #     path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/gluetun
+        #     type: DirectoryOrCreate
+        - name: qbitrr-config-hostpath
+          hostPath:
+            path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/qbitrr
+            type: DirectoryOrCreate
+        - name: main-data # Mount the consolidated data volume
+          persistentVolumeClaim:
+            claimName: main-data-pvc
+        # Remove /dev/net/tun volume
+        # - name: dev-net-tun
+        #   hostPath:
+        #     path: /dev/net/tun
+        #     type: CharDevice
+      # Remove initContainer
+      # initContainers:
+      #   ... (removed) ...
+      containers:
+        # Remove gluetun container
+        # - name: gluetun
+        #   ... (removed) ...
+
+        - name: qbitrr # Now the only container
+          image: feramance/qbitrr:latest-arm # Assuming ARM compatibility needed
+          imagePullPolicy: IfNotPresent
+          # No ports needed for qbitrr itself
+          env:
+            - name: PUID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PUID
+            - name: PGID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PGID
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: TZ
+            # Construct the qBittorrent URL directly using service name
+            - name: QBITRR__QBITTORRENT__HOST
+              value: "http://qbittorrent.torrentbox.svc.cluster.local:8080" # Point directly to service
+            - name: QBITRR__QBITTORRENT__USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: QBITTORRENT_USERNAME
+            - name: QBITRR__QBITTORRENT__PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: torrentbox-secrets
+                  key: QBITTORRENT_PASSWORD
+          volumeMounts:
+            - name: qbitrr-config-hostpath # Use hostPath volume
+              mountPath: /config
+            - name: main-data # Mount the consolidated volume
+              mountPath: /data # Mount point inside the container (qbitrr needs access to the root for potential moves/links)
+          # Remove startupProbe as it's no longer needed without Gluetun dependency complexity
+          # startupProbe:
+          #   ... (removed) ...

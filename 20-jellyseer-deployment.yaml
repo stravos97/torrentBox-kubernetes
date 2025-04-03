@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyseer
+  namespace: torrentbox
+  labels:
+    app: jellyseer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jellyseer
+  template:
+    metadata:
+      labels:
+        app: jellyseer
+    spec:
+      terminationGracePeriodSeconds: 60
+      volumes:
+        # Use hostPath for Jellyseerr config
+        - name: jellyseer-config-hostpath
+          hostPath:
+            path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/jellyseer
+            type: DirectoryOrCreate
+        # Mount main data to allow Jellyseerr to potentially scan media if configured
+        - name: main-data
+          persistentVolumeClaim:
+            claimName: main-data-pvc
+      containers:
+        - name: jellyseer
+          image: fallenbagel/jellyseerr:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: webui
+              containerPort: 5055 # Port from compose file
+              protocol: TCP
+          env:
+            - name: PUID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PUID
+            - name: PGID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PGID
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: TZ
+            - name: UMASK
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: UMASK
+          volumeMounts:
+            - name: jellyseer-config-hostpath # Use hostPath volume
+              mountPath: /app/config # Matches compose volume
+            - name: main-data
+              mountPath: /data # Mount point for media access
+              subPath: media # Point specifically to the media subdirectory
+              readOnly: true # Jellyseerr likely only needs read access to media
+          readinessProbe:
+            httpGet:
+              path: /status # Jellyseerr status endpoint (check if this is correct)
+              port: webui
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3

@@ -1,0 +1,11 @@
+# macOS system file
+.DS_Store
+
+# Runtime configuration/data/logs mounted via hostPath
+config/
+
+# Backup files
+*.tar
+
+# Kubernetes secrets manifest
+02-secret.yaml

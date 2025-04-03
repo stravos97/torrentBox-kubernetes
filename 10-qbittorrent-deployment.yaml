@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qbittorrent
+  namespace: torrentbox
+  labels:
+    app: qbittorrent
+spec:
+  replicas: 1
+  # Revert to default RollingUpdate strategy
+  # strategy:
+  #   type: Recreate
+  selector:
+    matchLabels:
+      app: qbittorrent
+  template:
+    metadata:
+      labels:
+        app: qbittorrent
+    spec:
+      terminationGracePeriodSeconds: 60
+      volumes:
+        # Remove gluetun config volume
+        # - name: gluetun-config-hostpath
+        #   hostPath:
+        #     path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/gluetun
+        #     type: DirectoryOrCreate
+        - name: qbittorrent-config-hostpath
+          hostPath:
+            path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/qbittorrent/config
+            type: DirectoryOrCreate # Creates the directory if it doesn't exist on the host
+        - name: main-data # Mount the consolidated data volume
+          persistentVolumeClaim:
+            claimName: main-data-pvc
+        # Remove /dev/net/tun volume
+        # - name: dev-net-tun
+        #   hostPath:
+        #     path: /dev/net/tun
+        #     type: CharDevice
+      containers:
+        # Remove gluetun container
+        # - name: gluetun
+        #   ... (removed) ...
+
+        - name: qbittorrent # Now the only container
+          image: lscr.io/linuxserver/qbittorrent:4.6.5-r0-ls333
+          imagePullPolicy: IfNotPresent
+          ports: # Expose ports directly on this container
+            - name: qbit-webui # Use the same name as the service targetPort will use
+              containerPort: 8080 # The port qBittorrent listens on
+              protocol: TCP
+            - name: qbit-p2p-tcp
+              containerPort: 6881
+              protocol: TCP
+            - name: qbit-p2p-udp
+              containerPort: 6881
+              protocol: UDP
+          env:
+            - name: PUID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PUID
+            - name: PGID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PGID
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: TZ
+            - name: WEBUI_PORT # Ensure qBittorrent listens on the correct port
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: QBITTORRENT_PORT # Use the port defined in ConfigMap (8080)
+            - name: UMASK
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: UMASK
+          volumeMounts:
+            - name: qbittorrent-config-hostpath # Use the hostPath volume
+              mountPath: /config
+            - name: main-data # Mount the consolidated volume
+              mountPath: /data # Mount point inside the container
+              subPath: torrents # Use a subpath for qbittorrent downloads within the main data volume
+          readinessProbe:
+            tcpSocket:
+              port: 8080 # Check if the process is listening on the webui port internally
+            initialDelaySeconds: 15 # Give time for qbit to start
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3

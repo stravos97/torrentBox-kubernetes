@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lidarr # Service name used in ConfigMap (LIDARR_HOST)
+  namespace: torrentbox
+  labels:
+    app: lidarr
+spec:
+  type: ClusterIP # Internal service
+  selector:
+    app: lidarr # Selects the Pods managed by the lidarr Deployment
+  ports:
+    - name: webui
+      port: 8686 # Port the service listens on
+      targetPort: 8686 # Target the containerPort directly on the lidarr container
+      protocol: TCP

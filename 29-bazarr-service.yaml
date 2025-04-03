@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bazarr # Service name used in ConfigMap (BAZARR_HOST)
+  namespace: torrentbox
+  labels:
+    app: bazarr
+spec:
+  type: ClusterIP # Internal service
+  selector:
+    app: bazarr # Selects the Pods managed by the bazarr Deployment
+  ports:
+    - name: webui
+      port: 6767 # Port the service listens on
+      targetPort: 6767 # Target the containerPort directly on the bazarr container
+      protocol: TCP

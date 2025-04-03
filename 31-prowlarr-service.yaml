@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: prowlarr # Service name used in ConfigMap (PROWLARR_HOST)
+  namespace: torrentbox
+  labels:
+    app: prowlarr
+spec:
+  type: ClusterIP # Internal service
+  selector:
+    app: prowlarr # Selects the Pods managed by the prowlarr Deployment
+  ports:
+    - name: webui
+      port: 9696 # Port the service listens on
+      targetPort: 9696 # Target the containerPort directly on the prowlarr container
+      protocol: TCP

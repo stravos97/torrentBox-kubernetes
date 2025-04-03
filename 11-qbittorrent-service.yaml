@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent # Service name used in ConfigMap (QBITTORRENT_HOST)
+  namespace: torrentbox
+  labels:
+    app: qbittorrent
+spec:
+  type: ClusterIP # Internal service
+  selector:
+    app: qbittorrent # Selects the Pods managed by the qbittorrent Deployment
+  ports:
+    - name: webui
+      port: 8080 # Port the service listens on
+      targetPort: 8080 # Target the containerPort directly on the qbittorrent container
+      protocol: TCP
+    - name: p2p-tcp
+      port: 6881
+      targetPort: 6881 # Target the containerPort directly on the qbittorrent container
+      protocol: TCP
+    - name: p2p-udp
+      port: 6881
+      targetPort: 6881 # Target the containerPort directly on the qbittorrent container
+      protocol: UDP

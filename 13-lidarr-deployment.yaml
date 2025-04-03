@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lidarr
+  namespace: torrentbox
+  labels:
+    app: lidarr
+spec:
+  replicas: 1
+  # Revert to default RollingUpdate strategy
+  # strategy:
+  #   type: Recreate
+  selector:
+    matchLabels:
+      app: lidarr
+  template:
+    metadata:
+      labels:
+        app: lidarr
+    spec:
+      terminationGracePeriodSeconds: 60
+      volumes:
+        # Remove gluetun config volume
+        # - name: gluetun-config-hostpath
+        #   hostPath:
+        #     path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/gluetun
+        #     type: DirectoryOrCreate
+        - name: lidarr-config-hostpath
+          hostPath:
+            path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/lidarr
+            type: DirectoryOrCreate
+        - name: main-data # Mount the consolidated data volume
+          persistentVolumeClaim:
+            claimName: main-data-pvc
+        # Remove /dev/net/tun volume
+        # - name: dev-net-tun
+        #   hostPath:
+        #     path: /dev/net/tun
+        #     type: CharDevice
+      containers:
+        # Remove gluetun container
+        # - name: gluetun
+        #   ... (removed) ...
+
+        - name: lidarr # Now the only container
+          # Using linux/arm64 explicitly as specified in compose
+          image: lscr.io/linuxserver/lidarr:latest # platform handled by k8s node selector or runtime class if needed
+          imagePullPolicy: IfNotPresent
+          ports: # Expose ports directly on this container
+            - name: lidarr-webui # Use the same name as the service targetPort will use
+              containerPort: 8686 # Port from compose file
+              protocol: TCP
+          env:
+            - name: PUID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PUID
+            - name: PGID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PGID
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: TZ
+            - name: UMASK # Added UMASK from compose example
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: UMASK
+          volumeMounts:
+            - name: lidarr-config-hostpath # Use hostPath volume
+              mountPath: /config
+            - name: main-data # Mount the consolidated volume
+              mountPath: /data # Lidarr expects media/downloads here for hardlinks
+          readinessProbe:
+            httpGet:
+              path: /ping # Lidarr's ping endpoint
+              port: 8686 # Internal port Lidarr listens on
+            initialDelaySeconds: 20 # Give time for Lidarr to start
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3

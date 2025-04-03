@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flaresolverr # Service name used in ConfigMap (FLARESOLVERR_HOST)
+  namespace: torrentbox
+  labels:
+    app: flaresolverr
+spec:
+  type: ClusterIP # Internal service
+  selector:
+    app: flaresolverr # Selects the Pods managed by the flaresolverr Deployment
+  ports:
+    - name: http
+      port: 8191 # Port the service listens on
+      targetPort: 8191 # Target the containerPort directly on the flaresolverr container
+      protocol: TCP

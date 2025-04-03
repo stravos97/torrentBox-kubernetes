@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: doplarr
+  namespace: torrentbox
+  labels:
+    app: doplarr
+spec:
+  replicas: 1
+  # Revert to default RollingUpdate strategy
+  # strategy:
+  #   type: Recreate
+  selector:
+    matchLabels:
+      app: doplarr
+  template:
+    metadata:
+      labels:
+        app: doplarr
+    spec:
+      terminationGracePeriodSeconds: 60
+      # Removed entire volumes section as none are needed
+      containers:
+        # Remove gluetun container
+        # - name: gluetun
+        #   ... (removed) ...
+
+        - name: doplarr # Now the only container
+          # Using linux/arm64 explicitly as specified in compose
+          image: lscr.io/linuxserver/doplarr:latest # platform handled by k8s node selector or runtime class if needed
+          imagePullPolicy: IfNotPresent
+          # No ports needed for doplarr
+          env:
+            - name: PUID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PUID
+            - name: PGID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PGID
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: TZ
+            # Construct URLs directly using service names
+            - name: SONARR__URL
+              # Use the service name and port directly
+              value: "http://sonarr.torrentbox.svc.cluster.local:8989"
+            - name: RADARR__URL
+              # Use the service name and port directly
+              value: "http://radarr.torrentbox.svc.cluster.local:7878"
+            # Get API keys from Secret
+            - name: SONARR__API
+              valueFrom:
+                secretKeyRef:
+                  name: torrentbox-secrets
+                  key: SONARR_API
+            - name: RADARR__API
+              valueFrom:
+                secretKeyRef:
+                  name: torrentbox-secrets
+                  key: RADARR_API
+            - name: DISCORD__TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: torrentbox-secrets
+                  key: DISCORD_BOT
+          # No volume mounts needed for doplarr itself

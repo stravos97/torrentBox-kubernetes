@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarr # Service name used in ConfigMap (SONARR_HOST)
+  namespace: torrentbox
+  labels:
+    app: sonarr
+spec:
+  type: ClusterIP # Internal service
+  selector:
+    app: sonarr # Selects the Pods managed by the sonarr Deployment
+  ports:
+    - name: webui
+      port: 8989 # Port the service listens on
+      targetPort: 8989 # Target the containerPort directly on the sonarr container
+      protocol: TCP

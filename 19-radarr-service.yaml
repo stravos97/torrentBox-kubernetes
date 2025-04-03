@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: radarr # Service name used in ConfigMap (RADARR_HOST)
+  namespace: torrentbox
+  labels:
+    app: radarr
+spec:
+  type: ClusterIP # Internal service
+  selector:
+    app: radarr # Selects the Pods managed by the radarr Deployment
+  ports:
+    - name: webui
+      port: 7878 # Port the service listens on
+      targetPort: 7878 # Target the containerPort directly on the radarr container
+      protocol: TCP

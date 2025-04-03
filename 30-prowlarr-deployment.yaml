@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prowlarr
+  namespace: torrentbox
+  labels:
+    app: prowlarr
+spec:
+  replicas: 1
+  # Revert to default RollingUpdate strategy
+  # strategy:
+  #   type: Recreate
+  selector:
+    matchLabels:
+      app: prowlarr
+  template:
+    metadata:
+      labels:
+        app: prowlarr
+    spec:
+      terminationGracePeriodSeconds: 60
+      volumes:
+        # Remove gluetun config volume
+        # - name: gluetun-config-hostpath
+        #   hostPath:
+        #     path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/gluetun
+        #     type: DirectoryOrCreate
+        - name: prowlarr-config-hostpath
+          hostPath:
+            path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/prowlarr/config
+            type: DirectoryOrCreate
+        # Remove /dev/net/tun volume
+        # - name: dev-net-tun
+        #   hostPath:
+        #     path: /dev/net/tun
+        #     type: CharDevice
+      containers:
+        # Remove gluetun container
+        # - name: gluetun
+        #   ... (removed) ...
+
+        - name: prowlarr # Now the only container
+          # Using linux/arm64 explicitly as specified in compose
+          image: lscr.io/linuxserver/prowlarr:latest # platform handled by k8s node selector or runtime class if needed
+          imagePullPolicy: IfNotPresent
+          ports: # Expose ports directly on this container
+            - name: prowlarr-webui # Use the same name as the service targetPort will use
+              containerPort: 9696 # Port from compose file
+              protocol: TCP
+          env:
+            - name: PUID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PUID
+            - name: PGID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PGID
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: TZ
+            - name: UMASK # Added UMASK from compose example
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: UMASK # Corrected this from TZ
+          volumeMounts:
+            - name: prowlarr-config-hostpath # Use hostPath volume
+              mountPath: /config
+          readinessProbe:
+            httpGet:
+              path: /ping # Prowlarr's ping endpoint
+              port: 9696 # Internal port Prowlarr listens on
+            initialDelaySeconds: 20 # Give time for Prowlarr to start
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3

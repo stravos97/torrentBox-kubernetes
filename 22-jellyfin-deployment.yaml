@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  namespace: torrentbox
+  labels:
+    app: jellyfin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jellyfin
+  template:
+    metadata:
+      labels:
+        app: jellyfin
+    spec:
+      terminationGracePeriodSeconds: 60
+      volumes:
+        # Use hostPath for Jellyfin config
+        - name: jellyfin-config-hostpath
+          hostPath:
+            path: /Users/haashimalvi/git_repo/torrentBox-kubernetes/config/jellyfin
+            type: DirectoryOrCreate
+        - name: main-data # Mount the consolidated data volume for media
+          persistentVolumeClaim:
+            claimName: main-data-pvc
+      containers:
+        - name: jellyfin
+          image: lscr.io/linuxserver/jellyfin:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http-web
+              containerPort: 8096 # Main web UI port
+              protocol: TCP
+            - name: dlna-udp # Optional: DLNA service discovery
+              containerPort: 7359
+              protocol: UDP
+            - name: discovery-udp # Optional: Auto-discovery
+              containerPort: 1900
+              protocol: UDP
+          env:
+            - name: PUID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PUID
+            - name: PGID
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: PGID
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: TZ
+            - name: UMASK
+              valueFrom:
+                configMapKeyRef:
+                  name: torrentbox-config
+                  key: UMASK
+          volumeMounts:
+            - name: jellyfin-config-hostpath # Use hostPath volume
+              mountPath: /config # Matches compose volume
+            - name: main-data
+              mountPath: /data # Mount point for media access
+              subPath: media # Point specifically to the media subdirectory
+              readOnly: true # Jellyfin only needs read access to media libraries
+          readinessProbe:
+            httpGet:
+              path: /health # Jellyfin's health endpoint
+              port: http-web
+            initialDelaySeconds: 30 # Jellyfin can take a bit to start
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3

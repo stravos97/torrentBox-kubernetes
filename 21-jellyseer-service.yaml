@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyseer
+  namespace: torrentbox
+  labels:
+    app: jellyseer
+spec:
+  type: NodePort # Expose externally via node IP and a high port
+  selector:
+    app: jellyseer # Selects the Pods managed by the jellyseer Deployment
+  ports:
+    - name: webui
+      port: 5055 # Port the service listens on internally
+      targetPort: webui # Target the named port on the Jellyseerr container
+      protocol: TCP
+      # nodePort: 30055 # Optional: Specify a fixed NodePort (if allowed by cluster config)
