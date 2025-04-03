@@ -28,64 +28,70 @@ Consider implementing alternative VPN solutions before deploying in a production
 The system is organized into several interconnected components:
 
 ```mermaid
-graph TD
-    %% User Access Layer
-    User[User Browser] --> PortForward[Port Forwarding]
-    User --> NodePort[NodePort Services]
+graph TB
+    %% Main user access point
+    User((User))
     
-    %% NodePort Services (Direct User Access)
-    NodePort --> Jellyfin[Jellyfin]
-    NodePort --> Jellyseerr[Jellyseerr]
-    NodePort --> Sabnzbd[Sabnzbd]
+    %% Main functional groups
+    subgraph "User-Facing Interfaces"
+        Jellyfin["Jellyfin\n(Media Server)"]
+        Jellyseerr["Jellyseerr\n(Request System)"]
+    end
     
-    %% Port Forwarded Services
-    PortForward --> QBit[qBittorrent]
-    PortForward --> Sonarr[Sonarr]
-    PortForward --> Radarr[Radarr]
-    PortForward --> Lidarr[Lidarr]
-    PortForward --> Bazarr[Bazarr]
-    PortForward --> Prowlarr[Prowlarr]
-    PortForward --> FlareSolverr[FlareSolverr]
+    subgraph "Media Management"
+        Sonarr["Sonarr\n(TV Shows)"]
+        Radarr["Radarr\n(Movies)"]
+        Lidarr["Lidarr\n(Music)"]
+        Bazarr["Bazarr\n(Subtitles)"]
+    end
     
-    %% Application Connections
+    subgraph "Download & Search"
+        QBit["qBittorrent\n(Torrent Client)"]
+        Sabnzbd["Sabnzbd\n(Usenet Client)"]
+        Prowlarr["Prowlarr\n(Indexers)"]
+    end
+    
+    %% Storage
+    subgraph "Storage"
+        ConfigVol["Config Volume\n(Settings)"]
+        MediaVol["Media Volume\n(Content)"]
+    end
+    
+    %% Primary connections
+    User --> Jellyfin
+    User --> Jellyseerr
+    
+    Jellyseerr --> Sonarr
+    Jellyseerr --> Radarr
+    
+    Sonarr --> Prowlarr
+    Radarr --> Prowlarr
+    Lidarr --> Prowlarr
+    
+    Prowlarr --> QBit
+    Prowlarr --> Sabnzbd
+    
     Sonarr --> QBit
     Radarr --> QBit
-    Lidarr --> QBit
     
     Bazarr --> Sonarr
     Bazarr --> Radarr
     
-    Prowlarr --> Sonarr
-    Prowlarr --> Radarr
-    Prowlarr --> Lidarr
-    Prowlarr --> QBit
+    %% Content flow
+    QBit --> MediaVol
+    Sabnzbd --> MediaVol
+    MediaVol --> Jellyfin
     
-    Jellyseerr --> Jellyfin
-    Jellyseerr --> Sonarr
-    Jellyseerr --> Radarr
+    %% Style
+    classDef interfaces fill:#f9d71c,stroke:#333,stroke-width:1px
+    classDef management fill:#6db6ff,stroke:#333,stroke-width:1px
+    classDef download fill:#ff9e6d,stroke:#333,stroke-width:1px
+    classDef storage fill:#c3fab9,stroke:#333,stroke-width:1px
     
-    %% Storage
-    ConfigVolume["Config Volume (hostPath)"] --> QBit
-    ConfigVolume --> Sonarr
-    ConfigVolume --> Radarr
-    ConfigVolume --> Lidarr
-    ConfigVolume --> Bazarr
-    ConfigVolume --> Prowlarr
-    ConfigVolume --> Jellyfin
-    ConfigVolume --> Jellyseerr
-    ConfigVolume --> Sabnzbd
-    
-    MediaVolume["Media Volume (PVC)"] --> QBit
-    MediaVolume --> Sonarr
-    MediaVolume --> Radarr
-    MediaVolume --> Lidarr
-    MediaVolume --> Bazarr
-    MediaVolume --> Jellyfin
-    MediaVolume --> Jellyseerr
-    MediaVolume --> Sabnzbd
-    
-    style ConfigVolume fill:#ccf,stroke:#333,stroke-width:2px
-    style MediaVolume fill:#f9f,stroke:#333,stroke-width:2px
+    class Jellyfin,Jellyseerr interfaces
+    class Sonarr,Radarr,Lidarr,Bazarr management
+    class QBit,Sabnzbd,Prowlarr download
+    class ConfigVol,MediaVol storage
 ```
 
 ### Key Components Explained
