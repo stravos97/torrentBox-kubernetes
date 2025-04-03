@@ -65,7 +65,7 @@ graph TD
     Jellyseerr --> Radarr
     
     %% Storage
-    ConfigVolume[Config Volume\n(hostPath)] --> QBit
+    ConfigVolume["Config Volume (hostPath)"] --> QBit
     ConfigVolume --> Sonarr
     ConfigVolume --> Radarr
     ConfigVolume --> Lidarr
@@ -75,7 +75,7 @@ graph TD
     ConfigVolume --> Jellyseerr
     ConfigVolume --> Sabnzbd
     
-    MediaVolume[Media Volume\n(PVC)] --> QBit
+    MediaVolume["Media Volume (PVC)"] --> QBit
     MediaVolume --> Sonarr
     MediaVolume --> Radarr
     MediaVolume --> Lidarr
